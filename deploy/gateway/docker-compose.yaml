@@ -1,0 +1,65 @@
+services:
+  embeddings-gateway:
+    build:
+      context: ../../gateway
+    container_name: ${GATEWAY_CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      embeddings-gateway-loki:
+        condition: service_started
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()\"",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${GATEWAY_HOST}:${GATEWAY_HTTP_PORT}:8080"
+    extra_hosts:
+      - "host.docker.gateway:host-gateway"
+      - "host.docker.internal:host-gateway"
+    networks:
+      - gateway
+
+  embeddings-gateway-prometheus:
+    image: ${GATEWAY_PROMETHEUS_IMAGE}
+    container_name: ${GATEWAY_PROMETHEUS_CONTAINER_NAME}
+    restart: unless-stopped
+    ports:
+      - "${GATEWAY_HOST}:${GATEWAY_PROMETHEUS_HTTP_PORT}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./configs/prometheus-gateway.yaml:/etc/prometheus/prometheus.yml:ro
+      - embeddings-gateway-prometheus-data:/prometheus
+    networks:
+      - gateway
+
+  embeddings-gateway-loki:
+    image: ${GATEWAY_LOKI_IMAGE}
+    container_name: ${GATEWAY_LOKI_CONTAINER_NAME}
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    ports:
+      - "${GATEWAY_HOST}:${GATEWAY_LOKI_HTTP_PORT}:3100"
+    volumes:
+      - ./configs/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - embeddings-gateway-loki-data:/loki
+    networks:
+      - gateway
+
+volumes:
+  embeddings-gateway-prometheus-data:
+  embeddings-gateway-loki-data:
+
+networks:
+  gateway:
+    driver: bridge

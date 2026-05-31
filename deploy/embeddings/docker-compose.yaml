@@ -1,0 +1,51 @@
+services:
+  embeddings-vllm:
+    image: ${EMBEDDINGS_VLLM_IMAGE}
+    container_name: ${EMBEDDINGS_CONTAINER_NAME}
+    entrypoint: ["/bin/bash", "-lc"]
+    command: ["bash /serve_embeddings.sh"]
+    ipc: host
+    shm_size: "16g"
+    ports:
+      - "${EMBEDDINGS_HOST}:${EMBEDDINGS_HTTP_PORT}:8000"
+    environment:
+      CUDA_VISIBLE_DEVICES: ${CUDA_VISIBLE_DEVICES}
+      SERVED_MODEL_NAME: ${EMBEDDINGS_SERVED_MODEL_NAME}
+      MODEL_NAME: ${EMBEDDINGS_MODEL_MOUNT}
+      NCCL_DEBUG: WARN
+      NCCL_P2P_DISABLE: "0"
+      NCCL_IB_DISABLE: "0"
+      TORCH_NCCL_AVOID_RECORD_STREAMS: "1"
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    volumes:
+      - ${EMBEDDINGS_MODEL_PATH}:${EMBEDDINGS_MODEL_MOUNT}:ro
+      - ./serve_embeddings.sh:/serve_embeddings.sh:ro
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    runtime: nvidia
+    restart: unless-stopped
+    networks:
+      - embeddings
+
+  embeddings-vllm-prometheus:
+    image: ${EMBEDDINGS_PROMETHEUS_IMAGE}
+    container_name: ${EMBEDDINGS_PROMETHEUS_CONTAINER_NAME}
+    restart: unless-stopped
+    ports:
+      - "${EMBEDDINGS_HOST}:${EMBEDDINGS_PROMETHEUS_HTTP_PORT}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./configs/prometheus-vllm.yaml:/etc/prometheus/prometheus.yml:ro
+      - embeddings-vllm-prometheus-data:/prometheus
+    networks:
+      - embeddings
+
+volumes:
+  embeddings-vllm-prometheus-data:
+
+networks:
+  embeddings:
+    driver: bridge
