@@ -21,6 +21,7 @@ from app.utils import input_item_count, model_label
 
 EMBEDDINGS_ROUTE = "/v1/embeddings"
 MODELS_ROUTE = "/v1/models"
+TOKENIZE_ROUTE = "/tokenize"
 HEALTH_ROUTE = "/health"
 METRICS_ROUTE = "/gateway/metrics"
 ROOT_ROUTE = "/"
@@ -68,6 +69,10 @@ def create_router() -> APIRouter:
     @router.api_route(MODELS_ROUTE, methods=["GET"])
     async def models(request: Request) -> Response:
         return await _proxy(request, route=MODELS_ROUTE)
+
+    @router.api_route(TOKENIZE_ROUTE, methods=["POST"])
+    async def tokenize(request: Request) -> Response:
+        return await _proxy(request, route=TOKENIZE_ROUTE)
 
     @router.api_route(
         "/v1/{full_path:path}",
