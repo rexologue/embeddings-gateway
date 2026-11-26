@@ -76,6 +76,11 @@ GATEWAY_BACKEND_BASE_URL=http://host.docker.gateway:11010
 
 That matches the default backend debug port from `deploy/embeddings`.
 
+If the engine runs with a key (`EMBEDDINGS_API_KEY` in `deploy/embeddings/.env`),
+put the same value into `GATEWAY_BACKEND_API_KEY`: the gateway sends it on
+every proxied request and drops the caller's `Authorization`, so clients call
+the gateway without the engine key.
+
 Start:
 
 ```bash

@@ -35,7 +35,11 @@ def create_app_state(settings: Settings) -> AppState:
     )
     http_client = httpx.AsyncClient(timeout=timeout, limits=limits, follow_redirects=False)
     metrics = GatewayMetrics()
-    backend = OpenAICompatibleBackend(base_url=settings.backend_base_url, http=http_client)
+    backend = OpenAICompatibleBackend(
+        base_url=settings.backend_base_url,
+        http=http_client,
+        api_key=settings.backend_api_key,
+    )
     loki_publisher = LokiEventPublisher(
         enabled=settings.loki_enabled,
         push_url=settings.loki_push_url,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 def _get_bool_env(name: str, default: bool) -> bool:
@@ -17,6 +17,8 @@ def _get_bool_env(name: str, default: bool) -> bool:
 @dataclass(frozen=True, slots=True)
 class Settings:
     backend_base_url: str
+    # Kept out of repr so a logged Settings never shows the key.
+    backend_api_key: str | None = field(repr=False)
 
     connect_timeout: float
     read_timeout: float
@@ -39,6 +41,7 @@ class Settings:
                 "GATEWAY_BACKEND_BASE_URL",
                 "http://embeddings-vllm:8000",
             ).rstrip("/"),
+            backend_api_key=os.getenv("GATEWAY_BACKEND_API_KEY", "").strip() or None,
             connect_timeout=float(os.getenv("GATEWAY_TIMEOUT_CONNECT_SEC", "30")),
             read_timeout=float(os.getenv("GATEWAY_TIMEOUT_READ_SEC", "300")),
             write_timeout=float(os.getenv("GATEWAY_TIMEOUT_WRITE_SEC", "300")),
