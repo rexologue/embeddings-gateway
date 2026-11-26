@@ -11,7 +11,7 @@ and other `/v1/*` requests without chat/session/streaming-specific behavior.
 ## Layout
 
 ```text
-deploy/embeddings   vLLM embeddings backend and backend Prometheus
+deploy/embeddings   vLLM embeddings backend (serve_embeddings.example.sh) and backend Prometheus
 deploy/gateway      API gateway, gateway Prometheus, Loki
 gateway             FastAPI gateway source
 observability       Grafana dashboard JSON exports
@@ -21,10 +21,15 @@ docs                deployment and observability notes
 ## Start Backend
 
 ```bash
-cp deploy/embeddings/.env.example deploy/embeddings/.env
 cd deploy/embeddings
+cp .env.example .env
+cp serve_embeddings.example.sh serve_embeddings.sh
 docker compose --env-file .env -f docker-compose.yaml up -d
 ```
+
+`.env` holds the image, weights, GPU and port; `serve_embeddings.sh` holds the
+vLLM parameters, each commented in `serve_embeddings.example.sh`. Both are
+local and not in git (`docs/DEPLOY.md`).
 
 Default URLs:
 

@@ -1453,3 +1453,7 @@ client/*.yaml
 !client/request.example.yaml
 
 *session.json
+
+# Real launcher of a deployment; only the template is versioned.
+deploy/embeddings/*.sh
+!deploy/embeddings/serve_embeddings.example.sh
