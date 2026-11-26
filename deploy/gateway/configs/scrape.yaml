@@ -1,0 +1,21 @@
+# What embeddings-gateway-victoriametrics scrapes.
+#
+# %{BACKEND_TARGET} is host:port of GATEWAY_BACKEND_BASE_URL, set by the
+# container's entrypoint (docker-compose.yaml) and substituted by
+# VictoriaMetrics when it loads this file. Job names are the ones the
+# dashboards filter on.
+
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: embeddings-gateway
+    metrics_path: /gateway/metrics
+    static_configs:
+      - targets: ["embeddings-gateway:8080"]
+
+  # The engine, deploy/embeddings, through the host port it publishes.
+  - job_name: embeddings-vllm
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["%{BACKEND_TARGET}"]

@@ -1,5 +1,5 @@
 # Embeddings engine: one vLLM pooling server. Its /metrics are scraped by the
-# Prometheus of deploy/gateway, through the host port published here.
+# VictoriaMetrics of deploy/gateway, through the host port published here.
 #
 # vLLM itself is configured by serve_embeddings.sh (a copy of
 # serve_embeddings.example.sh, not in git); .env only says which image, which

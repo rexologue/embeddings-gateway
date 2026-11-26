@@ -8,7 +8,7 @@ keeps vLLM operational metrics independent from gateway/API metrics.
 `deploy/embeddings` contains:
 
 - vLLM OpenAI-compatible embeddings server (pooling runner). Its `/metrics`
-  are scraped by the Prometheus of `deploy/gateway`.
+  are scraped by the VictoriaMetrics of `deploy/gateway`.
 
 Settings are split in two files, both local and not in git:
 
@@ -30,7 +30,7 @@ Edit `deploy/embeddings/.env`:
 - `EMBEDDINGS_HTTP_PORT` exposes the backend API the gateway calls;
 - `EMBEDDINGS_API_KEY` - optional engine key;
 - `EMBEDDINGS_HOST` - `172.17.0.1` keeps the port reachable from containers
-  (the gateway and its Prometheus) but not from the network.
+  (the gateway and its VictoriaMetrics) but not from the network.
 
 Edit `deploy/embeddings/serve_embeddings.sh`, at least:
 
@@ -59,11 +59,12 @@ Useful URLs:
 `deploy/gateway` contains:
 
 - FastAPI API gateway;
-- Prometheus scraping gateway `/gateway/metrics` and vLLM `/metrics`;
+- VictoriaMetrics scraping gateway `/gateway/metrics` and vLLM `/metrics`
+  (a Prometheus datasource for Grafana);
 - Loki for structured gateway request/response/error events.
 
-Prometheus and Loki keep their data in host directories, normally on NFS:
-`GATEWAY_PROMETHEUS_VOLUME` and `GATEWAY_LOKI_VOLUME`, both running as
+VictoriaMetrics and Loki keep their data in host directories, normally on
+NFS: `GATEWAY_VM_VOLUME` and `GATEWAY_LOKI_VOLUME`, both running as
 `GATEWAY_RUN_AS` (65534 for a root_squash export). The directories must exist
 before `up`; Compose does not create them.
 
@@ -98,7 +99,7 @@ Useful URLs:
 - gateway API: `http://0.0.0.0:11000`
 - gateway health: `http://0.0.0.0:11000/health`
 - gateway metrics: `http://0.0.0.0:11000/gateway/metrics`
-- gateway Prometheus: `http://0.0.0.0:11100`
+- VictoriaMetrics (Prometheus API, vmui at `/vmui`): `http://0.0.0.0:11100`
 - Loki: `http://0.0.0.0:11102`
 
 ## Validation

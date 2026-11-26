@@ -3,7 +3,7 @@
 OpenAI-compatible embeddings deployment split into two small stacks:
 
 - `deploy/embeddings` runs the vLLM embeddings backend.
-- `deploy/gateway` runs the API gateway, Prometheus (gateway and vLLM
+- `deploy/gateway` runs the API gateway, VictoriaMetrics (gateway and vLLM
   metrics), and Loki.
 
 The gateway is intentionally narrow: it proxies `/v1/embeddings`, `/v1/models`,
@@ -13,7 +13,7 @@ and other `/v1/*` requests without chat/session/streaming-specific behavior.
 
 ```text
 deploy/embeddings   vLLM embeddings backend (serve_embeddings.example.sh)
-deploy/gateway      API gateway, Prometheus (gateway + vLLM), Loki
+deploy/gateway      API gateway, VictoriaMetrics (gateway + vLLM), Loki
 gateway             FastAPI gateway source
 observability       Grafana dashboard JSON exports
 docs                deployment and observability notes
@@ -49,7 +49,7 @@ Default URLs:
 - gateway API: `http://0.0.0.0:11000`
 - gateway health: `http://0.0.0.0:11000/health`
 - gateway metrics: `http://0.0.0.0:11000/gateway/metrics`
-- gateway Prometheus: `http://0.0.0.0:11100`
+- VictoriaMetrics (Prometheus API, vmui at `/vmui`): `http://0.0.0.0:11100`
 - Loki: `http://0.0.0.0:11102`
 
 ## Smoke Check

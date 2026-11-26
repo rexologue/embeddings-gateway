@@ -1,20 +1,23 @@
 # Metrics
 
-One Prometheus, in `deploy/gateway`, scrapes both the gateway and the
-engine. Jobs keep the names of the two instances it replaced
-(`embeddings-vllm`, `embeddings-gateway`), so the dashboards are unchanged.
+One VictoriaMetrics single-node, in `deploy/gateway`, scrapes both the
+gateway and the engine and serves the samples as a Prometheus datasource. Jobs
+keep the names of the two Prometheus instances it replaced (`embeddings-vllm`,
+`embeddings-gateway`), so the dashboards are unchanged. VictoriaMetrics and not
+Prometheus, because its data lives on NFS, which the Prometheus TSDB does not
+support.
 
 ## Backend vLLM Metrics
 
-The Prometheus of `deploy/gateway` scrapes vLLM directly, through the host,
+The VictoriaMetrics of `deploy/gateway` scrapes vLLM directly, through the host,
 at host:port of `GATEWAY_BACKEND_BASE_URL` (job `embeddings-vllm`):
 
 ```text
 GET /metrics on host.docker.gateway:<EMBEDDINGS_HTTP_PORT>
 ```
 
-The entrypoint of the Prometheus container writes that address into its
-config, since Prometheus does not expand variables there.
+The entrypoint of the container cuts that address out of the URL into
+`BACKEND_TARGET`, which `configs/scrape.yaml` names as `%{BACKEND_TARGET}`.
 
 This stack does not include DCGM exporter or node exporter. It tracks only
 metrics exported by the vLLM OpenAI-compatible server.
@@ -30,7 +33,7 @@ The backend dashboard focuses on embeddings-relevant vLLM metrics:
 - average input tokens per request;
 - cache pressure;
 - vLLM process memory and file descriptors;
-- Prometheus scrape health.
+- scrape health (`up`).
 
 Generation-specific panels such as TTFT, decode latency, output token
 throughput, and inter-token latency are intentionally omitted because

@@ -28,43 +28,52 @@ services:
     networks:
       - gateway
 
-  # The one Prometheus of the deployment: the gateway's own metrics
-  # (/gateway/metrics) and the engine's (vLLM /metrics). The engine runs in
-  # another compose stack, so it is scraped through the host at the address in
-  # GATEWAY_BACKEND_BASE_URL; Prometheus does not expand variables in its
-  # config, so the entrypoint writes that address into a copy of it.
-  embeddings-gateway-prometheus:
-    image: ${GATEWAY_PROMETHEUS_IMAGE}
-    container_name: ${GATEWAY_PROMETHEUS_CONTAINER_NAME}
+  # The metrics store of the deployment, VictoriaMetrics single-node: it
+  # scrapes the gateway's own metrics (/gateway/metrics) and the engine's (vLLM
+  # /metrics) itself and answers Grafana as a Prometheus datasource. Not
+  # Prometheus: its TSDB does not support NFS, VictoriaMetrics storage does.
+  #
+  # The engine runs in another compose stack and is scraped through the host,
+  # at host:port of GATEWAY_BACKEND_BASE_URL. The entrypoint cuts that out of
+  # the URL into BACKEND_TARGET, which the scrape config names as
+  # %{BACKEND_TARGET}; VictoriaMetrics substitutes it when it loads the file.
+  # -maxLabelsPerTimeseries: vllm:cache_config_info carries 43 labels in
+  # vLLM v0.34, over the default 40, and would be dropped.
+  embeddings-gateway-victoriametrics:
+    image: ${GATEWAY_VM_IMAGE}
+    container_name: ${GATEWAY_VM_CONTAINER_NAME}
     restart: unless-stopped
     user: "${GATEWAY_RUN_AS}"
     ports:
-      - "${GATEWAY_HOST}:${GATEWAY_PROMETHEUS_HTTP_PORT}:9090"
+      - "${GATEWAY_HOST}:${GATEWAY_VM_HTTP_PORT}:8428"
     environment:
       BACKEND_BASE_URL: ${GATEWAY_BACKEND_BASE_URL}
+      RETENTION: ${GATEWAY_VM_RETENTION}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
         set -eu
         target=$${BACKEND_BASE_URL#*://}
-        target=$${target%%/*}
-        sed "s#__BACKEND_TARGET__#$$target#" /etc/prometheus/prometheus.template.yml > /prometheus/prometheus.yml
-        echo "scraping engine at $$target"
-        exec /bin/prometheus \
-          --config.file=/prometheus/prometheus.yml \
-          --storage.tsdb.path=/prometheus
+        export BACKEND_TARGET=$${target%%/*}
+        echo "scraping engine at $$BACKEND_TARGET"
+        exec /victoria-metrics-prod \
+          -storageDataPath=/storage \
+          -retentionPeriod=$$RETENTION \
+          -promscrape.config=/etc/victoriametrics/scrape.yaml \
+          -maxLabelsPerTimeseries=64 \
+          -httpListenAddr=:8428
     extra_hosts:
       - "host.docker.gateway:host-gateway"
       - "host.docker.internal:host-gateway"
     volumes:
-      - ./configs/prometheus-gateway.yaml:/etc/prometheus/prometheus.template.yml:ro
+      - ./configs/scrape.yaml:/etc/victoriametrics/scrape.yaml:ro
 
-      # Data on NFS (GATEWAY_PROMETHEUS_VOLUME). Nothing is created on the
-      # host: a missing mount fails the start instead of filling a fresh,
-      # empty directory on the local disk.
+      # Data on NFS (GATEWAY_VM_VOLUME). Nothing is created on the host: a
+      # missing mount fails the start instead of filling a fresh, empty
+      # directory on the local disk.
       - type: bind
-        source: ${GATEWAY_PROMETHEUS_VOLUME}
-        target: /prometheus
+        source: ${GATEWAY_VM_VOLUME}
+        target: /storage
         bind:
           create_host_path: false
     networks:
