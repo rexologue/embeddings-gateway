@@ -8,7 +8,7 @@ or managed observability workspace.
 
 `backend-vllm-embeddings-prometheus.json`
 
-- Uses the backend Prometheus from `deploy/embeddings`.
+- Uses the Prometheus from `deploy/gateway` (job `embeddings-vllm`).
 - Based on the vLLM Prometheus dashboard shape, trimmed for embeddings.
 - Omits DCGM, node exporter, generation tokens, TTFT, decode latency, and
   inter-token latency panels.

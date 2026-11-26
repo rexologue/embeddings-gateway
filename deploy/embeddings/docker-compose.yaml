@@ -1,4 +1,5 @@
-# Embeddings engine: one vLLM pooling server and the Prometheus that scrapes it.
+# Embeddings engine: one vLLM pooling server. Its /metrics are scraped by the
+# Prometheus of deploy/gateway, through the host port published here.
 #
 # vLLM itself is configured by serve_embeddings.sh (a copy of
 # serve_embeddings.example.sh, not in git); .env only says which image, which
@@ -41,29 +42,6 @@ services:
     networks:
       - embeddings
 
-
-  embeddings-vllm-prometheus:
-    image: ${EMBEDDINGS_PROMETHEUS_IMAGE}
-    container_name: ${EMBEDDINGS_PROMETHEUS_CONTAINER_NAME}
-    restart: unless-stopped
-
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-
-    ports:
-      - "${EMBEDDINGS_HOST}:${EMBEDDINGS_PROMETHEUS_HTTP_PORT}:9090"
-
-    volumes:
-      - ./configs/prometheus-vllm.yaml:/etc/prometheus/prometheus.yml:ro
-      - embeddings-vllm-prometheus-data:/prometheus
-
-    networks:
-      - embeddings
-
-
-volumes:
-  embeddings-vllm-prometheus-data:
 
 networks:
   embeddings:

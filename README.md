@@ -2,8 +2,9 @@
 
 OpenAI-compatible embeddings deployment split into two small stacks:
 
-- `deploy/embeddings` runs the vLLM embeddings backend and backend Prometheus.
-- `deploy/gateway` runs the API gateway, gateway Prometheus, and Loki.
+- `deploy/embeddings` runs the vLLM embeddings backend.
+- `deploy/gateway` runs the API gateway, Prometheus (gateway and vLLM
+  metrics), and Loki.
 
 The gateway is intentionally narrow: it proxies `/v1/embeddings`, `/v1/models`,
 and other `/v1/*` requests without chat/session/streaming-specific behavior.
@@ -11,8 +12,8 @@ and other `/v1/*` requests without chat/session/streaming-specific behavior.
 ## Layout
 
 ```text
-deploy/embeddings   vLLM embeddings backend (serve_embeddings.example.sh) and backend Prometheus
-deploy/gateway      API gateway, gateway Prometheus, Loki
+deploy/embeddings   vLLM embeddings backend (serve_embeddings.example.sh)
+deploy/gateway      API gateway, Prometheus (gateway + vLLM), Loki
 gateway             FastAPI gateway source
 observability       Grafana dashboard JSON exports
 docs                deployment and observability notes
@@ -34,7 +35,6 @@ local and not in git (`docs/DEPLOY.md`).
 Default URLs:
 
 - vLLM API: `http://0.0.0.0:11010`
-- vLLM Prometheus: `http://0.0.0.0:11101`
 
 ## Start Gateway
 

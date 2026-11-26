@@ -7,8 +7,8 @@ keeps vLLM operational metrics independent from gateway/API metrics.
 
 `deploy/embeddings` contains:
 
-- vLLM OpenAI-compatible embeddings server (pooling runner);
-- Prometheus scraping vLLM `/metrics`.
+- vLLM OpenAI-compatible embeddings server (pooling runner). Its `/metrics`
+  are scraped by the Prometheus of `deploy/gateway`.
 
 Settings are split in two files, both local and not in git:
 
@@ -29,7 +29,8 @@ Edit `deploy/embeddings/.env`:
 - `EMBEDDINGS_GPU_DEVICES` selects the GPU(s);
 - `EMBEDDINGS_HTTP_PORT` exposes the backend API the gateway calls;
 - `EMBEDDINGS_API_KEY` - optional engine key;
-- `EMBEDDINGS_PROMETHEUS_HTTP_PORT` exposes backend Prometheus.
+- `EMBEDDINGS_HOST` - `172.17.0.1` keeps the port reachable from containers
+  (the gateway and its Prometheus) but not from the network.
 
 Edit `deploy/embeddings/serve_embeddings.sh`, at least:
 
@@ -52,14 +53,13 @@ Useful URLs:
 
 - vLLM API: `http://0.0.0.0:11010`
 - vLLM metrics: `http://0.0.0.0:11010/metrics`
-- backend Prometheus: `http://0.0.0.0:11101`
 
 ## Gateway Stack
 
 `deploy/gateway` contains:
 
 - FastAPI API gateway;
-- Prometheus scraping gateway `/gateway/metrics`;
+- Prometheus scraping gateway `/gateway/metrics` and vLLM `/metrics`;
 - Loki for structured gateway request/response/error events.
 
 Create local settings:

@@ -28,17 +28,35 @@ services:
     networks:
       - gateway
 
+  # The one Prometheus of the deployment: the gateway's own metrics
+  # (/gateway/metrics) and the engine's (vLLM /metrics). The engine runs in
+  # another compose stack, so it is scraped through the host at the address in
+  # GATEWAY_BACKEND_BASE_URL; Prometheus does not expand variables in its
+  # config, so the entrypoint writes that address into a copy of it.
   embeddings-gateway-prometheus:
     image: ${GATEWAY_PROMETHEUS_IMAGE}
     container_name: ${GATEWAY_PROMETHEUS_CONTAINER_NAME}
     restart: unless-stopped
     ports:
       - "${GATEWAY_HOST}:${GATEWAY_PROMETHEUS_HTTP_PORT}:9090"
+    environment:
+      BACKEND_BASE_URL: ${GATEWAY_BACKEND_BASE_URL}
+    entrypoint: ["/bin/sh", "-c"]
     command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
+      - |
+        set -eu
+        target=$${BACKEND_BASE_URL#*://}
+        target=$${target%%/*}
+        sed "s#__BACKEND_TARGET__#$$target#" /etc/prometheus/prometheus.template.yml > /prometheus/prometheus.yml
+        echo "scraping engine at $$target"
+        exec /bin/prometheus \
+          --config.file=/prometheus/prometheus.yml \
+          --storage.tsdb.path=/prometheus
+    extra_hosts:
+      - "host.docker.gateway:host-gateway"
+      - "host.docker.internal:host-gateway"
     volumes:
-      - ./configs/prometheus-gateway.yaml:/etc/prometheus/prometheus.yml:ro
+      - ./configs/prometheus-gateway.yaml:/etc/prometheus/prometheus.template.yml:ro
       - embeddings-gateway-prometheus-data:/prometheus
     networks:
       - gateway
