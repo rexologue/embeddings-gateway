@@ -24,9 +24,11 @@ services:
       # sizes - matters on a GPU shared with other engines.
       PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
 
-    # /health, not /v1/models: vLLM does not ask for the API key there.
+    # /v1/models with the engine key: healthy means the model is served AND
+    # the key works, not just that the process is up. $$ leaves the key to the
+    # container's shell, so it never appears in the healthcheck definition.
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -fsS -H \"Authorization: Bearer $${EMBEDDINGS_API_KEY}\" http://127.0.0.1:8000/v1/models >/dev/null || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 30

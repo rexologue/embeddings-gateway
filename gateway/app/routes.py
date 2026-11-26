@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import uuid
+
 import asyncio
 import time
 from typing import cast
@@ -37,11 +39,14 @@ def create_router() -> APIRouter:
     @router.get(HEALTH_ROUTE)
     async def health(request: Request) -> Response:
         state = _get_state(request.app)
+        # Same headers as a proxied request, engine key included: a wrong key
+        # must make the gateway unhealthy, not pass as a 401 from a live engine.
+        headers = state.backend.forwarded_headers({}, request_id=uuid.uuid4().hex)
         try:
             backend_response = await state.backend.request(
                 method="GET",
                 route=MODELS_ROUTE,
-                headers={},
+                headers=headers,
                 content=b"",
             )
         except httpx.HTTPError as exc:
@@ -50,12 +55,13 @@ def create_router() -> APIRouter:
                 status_code=503,
             )
 
+        ok = backend_response.status_code < 500 and backend_response.status_code not in (401, 403)
         return JSONResponse(
             {
-                "ok": backend_response.status_code < 500,
+                "ok": ok,
                 "backend_status_code": backend_response.status_code,
             },
-            status_code=200 if backend_response.status_code < 500 else 503,
+            status_code=200 if ok else 503,
         )
 
     @router.get(METRICS_ROUTE)

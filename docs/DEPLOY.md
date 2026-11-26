@@ -62,6 +62,11 @@ Useful URLs:
 - Prometheus scraping gateway `/gateway/metrics` and vLLM `/metrics`;
 - Loki for structured gateway request/response/error events.
 
+Prometheus and Loki keep their data in host directories, normally on NFS:
+`GATEWAY_PROMETHEUS_VOLUME` and `GATEWAY_LOKI_VOLUME`, both running as
+`GATEWAY_RUN_AS` (65534 for a root_squash export). The directories must exist
+before `up`; Compose does not create them.
+
 Create local settings:
 
 ```bash

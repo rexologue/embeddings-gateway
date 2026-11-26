@@ -37,6 +37,7 @@ services:
     image: ${GATEWAY_PROMETHEUS_IMAGE}
     container_name: ${GATEWAY_PROMETHEUS_CONTAINER_NAME}
     restart: unless-stopped
+    user: "${GATEWAY_RUN_AS}"
     ports:
       - "${GATEWAY_HOST}:${GATEWAY_PROMETHEUS_HTTP_PORT}:9090"
     environment:
@@ -57,7 +58,15 @@ services:
       - "host.docker.internal:host-gateway"
     volumes:
       - ./configs/prometheus-gateway.yaml:/etc/prometheus/prometheus.template.yml:ro
-      - embeddings-gateway-prometheus-data:/prometheus
+
+      # Data on NFS (GATEWAY_PROMETHEUS_VOLUME). Nothing is created on the
+      # host: a missing mount fails the start instead of filling a fresh,
+      # empty directory on the local disk.
+      - type: bind
+        source: ${GATEWAY_PROMETHEUS_VOLUME}
+        target: /prometheus
+        bind:
+          create_host_path: false
     networks:
       - gateway
 
@@ -65,18 +74,20 @@ services:
     image: ${GATEWAY_LOKI_IMAGE}
     container_name: ${GATEWAY_LOKI_CONTAINER_NAME}
     restart: unless-stopped
+    user: "${GATEWAY_RUN_AS}"
     command: ["-config.file=/etc/loki/local-config.yaml"]
     ports:
       - "${GATEWAY_HOST}:${GATEWAY_LOKI_HTTP_PORT}:3100"
     volumes:
       - ./configs/loki-config.yaml:/etc/loki/local-config.yaml:ro
-      - embeddings-gateway-loki-data:/loki
+
+      - type: bind
+        source: ${GATEWAY_LOKI_VOLUME}
+        target: /loki
+        bind:
+          create_host_path: false
     networks:
       - gateway
-
-volumes:
-  embeddings-gateway-prometheus-data:
-  embeddings-gateway-loki-data:
 
 networks:
   gateway:
