@@ -49,6 +49,9 @@ services:
     environment:
       BACKEND_BASE_URL: ${GATEWAY_BACKEND_BASE_URL}
       RETENTION: ${GATEWAY_VM_RETENTION}
+      # Labels of every scraped series (configs/scrape.yaml).
+      HOST_ID: ${GATEWAY_HOST_ID}
+      ENGINE_ID: ${GATEWAY_ENGINE_ID}
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

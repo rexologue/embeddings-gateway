@@ -2,8 +2,10 @@
 #
 # %{BACKEND_TARGET} is host:port of GATEWAY_BACKEND_BASE_URL, set by the
 # container's entrypoint (docker-compose.yaml) and substituted by
-# VictoriaMetrics when it loads this file. Job names are the ones the
-# dashboards filter on.
+# VictoriaMetrics when it loads this file, and so are %{HOST_ID} and
+# %{ENGINE_ID}, GATEWAY_HOST_ID and GATEWAY_ENGINE_ID of .env. Job names are
+# the ones the dashboards filter on; the host/engine labels are the ones
+# llm-gateway puts on its series, so one Grafana tells the machines apart.
 
 global:
   scrape_interval: 5s
@@ -13,9 +15,11 @@ scrape_configs:
     metrics_path: /gateway/metrics
     static_configs:
       - targets: ["embeddings-gateway:8080"]
+        labels: {engine: "%{ENGINE_ID}", host: "%{HOST_ID}"}
 
   # The engine, deploy/embeddings, through the host port it publishes.
   - job_name: embeddings-vllm
     metrics_path: /metrics
     static_configs:
       - targets: ["%{BACKEND_TARGET}"]
+        labels: {engine: "%{ENGINE_ID}", host: "%{HOST_ID}"}

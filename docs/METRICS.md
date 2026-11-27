@@ -60,6 +60,9 @@ Metrics:
 - `embeddings_gateway_loki_push_total`
 - `embeddings_gateway_loki_events_dropped_total`
 
+Every scraped series also carries `host` and `engine` (`GATEWAY_HOST_ID`,
+`GATEWAY_ENGINE_ID`), the same labels as llm-gateway's.
+
 Labels are intentionally low-cardinality: `route`, `method`, `model`,
 `status_family`, and `result` where applicable. The gateway does not use
 `request_id` or request text as Prometheus labels.
