@@ -13,6 +13,7 @@ from fastapi import APIRouter, FastAPI, Request, Response
 from fastapi.responses import JSONResponse, PlainTextResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
+from app.auth import OPEN_ROUTES, REJECT_UNAUTHORIZED
 from app.http_utils import (
     parse_json_maybe,
     request_id_from_headers,
@@ -27,6 +28,11 @@ TOKENIZE_ROUTE = "/tokenize"
 HEALTH_ROUTE = "/health"
 METRICS_ROUTE = "/gateway/metrics"
 ROOT_ROUTE = "/"
+
+# app.auth keeps its own copy of the probe paths; this keeps the two in step.
+assert OPEN_ROUTES == {HEALTH_ROUTE, METRICS_ROUTE}
+
+UNAUTHORIZED_MESSAGE = "Invalid API key. Send it as 'Authorization: Bearer <key>'."
 
 
 def _get_state(app: FastAPI) -> AppState:
@@ -92,6 +98,38 @@ def create_router() -> APIRouter:
         return PlainTextResponse("Embeddings gateway is up")
 
     return router
+
+
+async def reject_unauthorized(request: Request) -> Response:
+    """Refuse a request without a valid gateway key, the way OpenAI does.
+
+    Logged and counted like a proxied request, without the key: headers are
+    sanitized and the query string is left out.
+    """
+
+    state = _get_state(request.app)
+    method = request.method.upper()
+    state.metrics.rejected_request(method=method, reason=REJECT_UNAUTHORIZED)
+    await state.loki.log_rejected(
+        method=method,
+        path=request.url.path,
+        status_code=401,
+        reason=REJECT_UNAUTHORIZED,
+        client_ip=request.client.host if request.client else None,
+        headers=request.headers,
+    )
+    return JSONResponse(
+        {
+            "error": {
+                "message": UNAUTHORIZED_MESSAGE,
+                "type": "invalid_request_error",
+                "param": None,
+                "code": "invalid_api_key",
+            }
+        },
+        status_code=401,
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
 
 async def _proxy(request: Request, *, route: str) -> Response:

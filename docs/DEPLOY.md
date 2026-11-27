@@ -87,6 +87,15 @@ put the same value into `GATEWAY_BACKEND_API_KEY`: the gateway sends it on
 every proxied request and drops the caller's `Authorization`, so clients call
 the gateway without the engine key.
 
+Callers authenticate with the gateway's own keys, `GATEWAY_API_KEYS`
+(comma-separated), sent as `Authorization: Bearer <key>`. With keys set,
+every route except `/health` (the container healthcheck) and
+`/gateway/metrics` (scraped by VictoriaMetrics) answers an OpenAI-shaped 401
+(`invalid_api_key`) without one; the refusal is counted in
+`embeddings_gateway_rejected_requests_total` and logged as
+`embeddings_rejected`, without the key. The caller's `Authorization` is never
+passed to the engine.
+
 Start:
 
 ```bash
@@ -120,10 +129,12 @@ once the weights are loaded):
 ```bash
 curl -fsS http://127.0.0.1:11010/health
 curl -fsS http://127.0.0.1:11010/v1/models
+KEY=<one of GATEWAY_API_KEYS>
 curl -fsS http://127.0.0.1:11000/health
-curl -fsS http://127.0.0.1:11000/v1/models
+curl -fsS http://127.0.0.1:11000/v1/models -H "Authorization: Bearer $KEY"
 curl -fsS http://127.0.0.1:11000/gateway/metrics
 curl -fsS http://127.0.0.1:11000/v1/embeddings \
+  -H "Authorization: Bearer $KEY" \
   -H 'content-type: application/json' \
   -d '{"model":"embeddings-model","input":["hello","world"]}'
 ```

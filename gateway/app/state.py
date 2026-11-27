@@ -39,6 +39,7 @@ def create_app_state(settings: Settings) -> AppState:
         base_url=settings.backend_base_url,
         http=http_client,
         api_key=settings.backend_api_key,
+        drop_caller_authorization=bool(settings.api_keys),
     )
     loki_publisher = LokiEventPublisher(
         enabled=settings.loki_enabled,

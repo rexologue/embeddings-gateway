@@ -17,15 +17,21 @@ class OpenAICompatibleBackend:
         base_url: str,
         http: httpx.AsyncClient,
         api_key: str | None = None,
+        drop_caller_authorization: bool = False,
     ) -> None:
         """``api_key`` is the engine's own key. When it is set, the gateway is the
         only one who knows it: every proxied request carries it, and the
         ``Authorization`` the caller sent is dropped, never passed on.
+
+        ``drop_caller_authorization`` drops that header even without an engine
+        key: once callers send gateway keys, a gateway key must not reach the
+        engine.
         """
 
         self.base_url = base_url.rstrip("/")
         self.http = http
         self.api_key = api_key or None
+        self.drop_caller_authorization = drop_caller_authorization or self.api_key is not None
 
     def url_for(self, route: str) -> str:
         path = route if route.startswith("/") else f"/{route}"
@@ -41,12 +47,13 @@ class OpenAICompatibleBackend:
 
         forwarded = strip_hop_by_hop_headers(headers)
 
-        if self.api_key is not None:
+        if self.drop_caller_authorization:
             forwarded = {
                 key: value
                 for key, value in forwarded.items()
                 if key.lower() != "authorization"
             }
+        if self.api_key is not None:
             forwarded["authorization"] = f"Bearer {self.api_key}"
 
         forwarded["x-request-id"] = request_id

@@ -52,17 +52,35 @@ Default URLs:
 - VictoriaMetrics (Prometheus API, vmui at `/vmui`): `http://0.0.0.0:11100`
 - Loki: `http://0.0.0.0:11102`
 
+## Keys
+
+There are two keys, and a caller only ever sees one:
+
+- `GATEWAY_API_KEYS` (`deploy/gateway/.env`) - the gateway's own keys,
+  comma-separated. Callers use the gateway as a plain OpenAI API and send one
+  as `Authorization: Bearer <key>`. Every route answers 401 without it except
+  `/health` and `/gateway/metrics`. Empty = no key is asked.
+- `EMBEDDINGS_API_KEY` (`deploy/embeddings/.env`) - the engine's key, given
+  to the gateway as `GATEWAY_BACKEND_API_KEY`. The gateway sends it on every
+  proxied request and drops the caller's `Authorization`, so the engine key
+  never leaves the gateway and a gateway key never reaches the engine.
+
 ## Smoke Check
 
 ```bash
-curl -fsS http://127.0.0.1:11000/v1/models
+KEY=<one of GATEWAY_API_KEYS>
+
+curl -fsS http://127.0.0.1:11000/v1/models -H "Authorization: Bearer $KEY"
 
 curl -fsS http://127.0.0.1:11000/v1/embeddings \
+  -H "Authorization: Bearer $KEY" \
   -H 'content-type: application/json' \
   -d '{"model":"embeddings-model","input":["hello","world"]}'
 
 curl -fsS http://127.0.0.1:11000/gateway/metrics
 ```
+
+Unit tests: `cd gateway && pip install -r requirements-dev.txt && pytest`.
 
 ## Dashboards
 

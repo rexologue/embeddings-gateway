@@ -46,6 +46,12 @@ INPUT_ITEMS = Histogram(
     buckets=(1, 2, 4, 8, 16, 32, 64, 128, 256, 512),
 )
 
+REJECTED_COUNTER = Counter(
+    "embeddings_gateway_rejected_requests_total",
+    "Requests the embeddings gateway answered itself without proxying",
+    ["method", "reason"],
+)
+
 LOKI_PUSH_COUNTER = Counter(
     "embeddings_gateway_loki_push_total",
     "Log push attempts to Loki",
@@ -140,6 +146,9 @@ class GatewayMetrics:
         ).inc()
         REQUEST_E2E_LATENCY.labels(**labels).observe(e2e_sec)
         RESPONSE_BODY_BYTES.labels(**labels).observe(response_body_bytes)
+
+    def rejected_request(self, *, method: str, reason: str) -> None:
+        REJECTED_COUNTER.labels(method=method, reason=reason).inc()
 
     def loki_push(self, status: str) -> None:
         LOKI_PUSH_COUNTER.labels(status=status).inc()

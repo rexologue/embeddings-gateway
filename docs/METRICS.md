@@ -55,6 +55,8 @@ Metrics:
 - `embeddings_gateway_request_body_bytes`
 - `embeddings_gateway_response_body_bytes`
 - `embeddings_gateway_input_items`
+- `embeddings_gateway_rejected_requests_total` - requests answered by the
+  gateway itself, by `method` and `reason` (`unauthorized`)
 - `embeddings_gateway_loki_push_total`
 - `embeddings_gateway_loki_events_dropped_total`
 

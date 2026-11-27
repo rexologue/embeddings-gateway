@@ -9,6 +9,9 @@ from typing import Any, Mapping
 from app.http_utils import sanitize_headers, utc_now_iso
 from app.tools.loki import LokiEventPublisher
 
+REJECTED_ROUTE_LABEL = "rejected"
+REJECTED_PATH_MAX_CHARS = 256
+
 
 @dataclass(slots=True)
 class LokiRequestContext:
@@ -139,6 +142,38 @@ class GatewayLokiLogger:
             }
         )
         await self._submit(event)
+
+    async def log_rejected(
+        self,
+        *,
+        method: str,
+        path: str,
+        status_code: int,
+        reason: str,
+        client_ip: str | None,
+        headers: Mapping[str, str],
+    ) -> None:
+        """Write one event for a request the gateway answered without proxying.
+
+        The route is the fixed ``rejected``: a caller-controlled path would let
+        any scanner mint streams. The path, cut to a bounded length, goes into
+        the event; the query string does not, since a caller may put a key
+        there. Headers are sanitized like every other request's.
+        """
+
+        event = {
+            "level": "warn",
+            "bucket": "embeddings_rejected",
+            "event_type": "rejected",
+            "route": REJECTED_ROUTE_LABEL,
+            "method": method,
+            "status_code": status_code,
+            "warn_reason": reason,
+            "path": path[:REJECTED_PATH_MAX_CHARS],
+            "client_ip": client_ip,
+            "request_headers": sanitize_headers(headers),
+        }
+        await self._submit(self._compact(event))
 
     async def _submit(self, event: dict[str, Any]) -> None:
         record = {
